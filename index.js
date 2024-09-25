@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const app = express();
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 5000;
 const databaseInfo = require('./database');
 
@@ -29,12 +29,59 @@ async function run() {
 
     const coffeeCollection = client.db('coffeeDB').collection('coffee');
 
-    app.post('/coffee', async(req, res) => {
-        const newCoffee = req.body;
-        console.log(newCoffee);
+    //read all coffees
+    app.get('/coffee', async (req, res) => {
+      const cursor = coffeeCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
 
-        const result = await coffeeCollection.insertOne(newCoffee);
-        res.send(result);
+    //add a coffee
+    app.post('/coffee', async (req, res) => {
+      const newCoffee = req.body;
+      console.log(newCoffee);
+
+      const result = await coffeeCollection.insertOne(newCoffee);
+      res.send(result);
+    })
+
+    //delete a coffee
+    app.delete('/coffee/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await coffeeCollection.deleteOne(query);
+      res.send(result);
+    })
+
+    //get single coffee
+    app.get('/coffee/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await coffeeCollection.findOne(query);
+      res.send(result);
+    })
+
+    //put update coffee
+    app.put('/coffee/:id', async(req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updatedCoffee = req.body;
+      const coffee = {
+        $set: {
+          name: updatedCoffee.name,
+          price: updatedCoffee.price,
+          chef:updatedCoffee.chef,
+          supplier:updatedCoffee.supplier,
+          taste:updatedCoffee.taste,
+          category:updatedCoffee.category,
+          details:updatedCoffee.details,
+          photo:updatedCoffee.photo,
+        }
+      }
+
+      const result = await coffeeCollection.updateOne(filter, coffee, options);
+      res.send(result);
     })
 
 
@@ -49,11 +96,11 @@ async function run() {
 run().catch(console.dir);
 
 
-app.get('/', (req,res)=>{
-    res.send('coffee making server is running');
+app.get('/', (req, res) => {
+  res.send('coffee making server is running');
 })
 
 
-app.listen(port, ()=>{
-    console.log(`Coffee server is running on port ${port}`);   
+app.listen(port, () => {
+  console.log(`Coffee server is running on port ${port}`);
 })
